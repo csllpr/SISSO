@@ -18,7 +18,6 @@ use libsisso
 use FCse
 use FC
 use DI
-use ifport
 !-------------------
 implicit none
 
@@ -88,17 +87,9 @@ else
   icontinue=1
   tcontinue='FC'
   if(mpirank==0) then
-     iostatus=delfilesqq('Models/data_top1/*')
-     iostatus=delfilesqq('SIS_subspaces/*')
-     iostatus=delfilesqq('Models/*')
-
-     iostatus=deldirqq('Models/data_top1')
-     iostatus=deldirqq('SIS_subspaces')
-     iostatus=deldirqq('Models')
-
-     iostatus=makedirqq('Models')
-     iostatus=makedirqq('Models/data_top1')
-     iostatus=makedirqq('SIS_subspaces')
+     call execute_command_line('rm -rf Models/data_top1/* SIS_subspaces/* Models/* 2>/dev/null', wait=.true.)
+     call execute_command_line('rm -rf Models/data_top1 SIS_subspaces Models 2>/dev/null', wait=.true.)
+     call execute_command_line('mkdir -p Models Models/data_top1 SIS_subspaces', wait=.true.)
 !     iostatus=makedirqq('residual')
   end if
 end if
