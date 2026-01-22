@@ -12,7 +12,7 @@ program SISSO_predict
 ! Note: please make sure that no operator symbols appear in the feature names.
 ! E.g.: if a feature is named 'a', then 'abs()' will be mistakenly translated as xxxbs(), where xxx is the feature value.
 
-integer i,j,k,l,ndim,nd,nf,ns,ptype
+integer i,j,k,l,ndim,nd,nf,ns,ptype,ios
 character line*100000,pname*50
 character,allocatable:: desc(:)*500,allname(:)*50,afname(:)*50,mname(:)*50
 real*8 intercept,rmse,maxae
@@ -79,8 +79,9 @@ open(3,file='predict_Y.out',status='replace')
 open(4,file='predict_X.out',status='replace')
 
 nd=0
-do while(.not. eof(1))
-   read(1,'(a)') line
+do
+   read(1,'(a)', iostat=ios) line
+   if (ios /= 0) exit
    if(index(line,'D descriptor')/=0) then
       i=index(line,'D descriptor')
       read(line(:i-1),*) nd
@@ -217,14 +218,14 @@ do while(k<=len_trim(desc_str))
 end do
 
 inquire(file='desc_tmp',exist=fexist)
-if(fexist) call system('rm desc_tmp')
+if(fexist) call execute_command_line('rm desc_tmp', wait=.true.)
 do i=1,ns
      call nospace(desc_expr(i))
-     call system('echo "define abs(i){if(i<0) return (-i);return(i)} define exp(i){return(e(i))} &
+     call execute_command_line('echo "define abs(i){if(i<0) return (-i);return(i)} define exp(i){return(e(i))} &
                   define sin(i){return(s(i))}  define log(i){return(l(i))}  &
                   define cbrt(i){ if(i<0) return (-e(l(-i)/3)); if(i==0) return 0; return e(l(i)/3) } &
                   define cos(i){return(c(i))}  define scd(i){ return (1.0/3.14159265/(1+i^2))} &
-                  '//trim(adjustl(desc_expr(i)))//' " |bc -l >>desc_tmp')
+                  '//trim(adjustl(desc_expr(i)))//' " |bc -l >>desc_tmp', wait=.true.)
 end do
 
 open (111,file='desc_tmp',status='old')
@@ -232,7 +233,7 @@ do i=1,ns
     read(111,*) data_of_desc(i)
 end do
 close(111)
-call system('rm desc_tmp')
+call execute_command_line('rm desc_tmp', wait=.true.)
 
 end function
 
