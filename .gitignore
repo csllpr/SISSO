@@ -1,0 +1,20 @@
+# Fortran build artifacts
+*.mod
+*.o
+*.a
+*.so
+
+# Executables
+SISSO
+SISSO_predict
+k-fold-cv
+leave-percent-out-cv
+af2traindat
+
+# Output directories
+Models/
+SIS_subspaces/
+desc_tmp
+CONTINUE
+SISSO.out
+predict_*.out
