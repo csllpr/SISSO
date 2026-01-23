@@ -36,6 +36,7 @@ module libsisso
 !************************************************************************
 
 use mpi
+use var_global, only: mpirank, mpisize, mpierr, status
 
 contains
 
