@@ -21,17 +21,17 @@ implicit none
 contains
 
 subroutine descriptor_identification
-real*8,allocatable:: xinput(:,:,:),yinput(:,:),beta(:,:),beta_init(:,:),coeff(:,:),xprime(:,:,:),&
+real(kind=8),allocatable:: xinput(:,:,:),yinput(:,:),beta(:,:),beta_init(:,:),coeff(:,:),xprime(:,:,:),&
         xdprime(:,:,:),xmean(:,:),norm_xprime(:,:),yprime(:,:),prod_xty(:,:),prod_xtx(:,:,:),lassormse(:),&
         ymean(:),intercept(:),weight(:,:)
-real*8  lambda,lambda_max,alpha,rmse_ave
+real(kind=8)  lambda,lambda_max,alpha,rmse_ave
 integer run_iter,i,j,k,l,ll,nf,maxns,ntry,nactive,mpii,mpij,mpin
 integer,allocatable:: idf(:),activeset(:),ncol(:)
 character line*500
 character,allocatable:: expr(:)*200
 logical isnew,dat_readerr
 
-if(mpirank==0) mytime.sDI=mpi_wtime()
+if(mpirank==0) mytime%sDI=mpi_wtime()
    maxns=maxval(nsample)
 
 !--------------------------
@@ -111,7 +111,7 @@ call mpi_bcast(expr,nf_DI*200,mpi_character,0,mpi_comm_world,mpierr)
 weight=1.0
 
 ! weighted lasso
-if(L1para.weighted) then
+if(L1para%weighted) then
 open(fileunit,file='lasso.weight',status='old')
 read(fileunit,*) ! title line
 do i=1,ntask
@@ -230,15 +230,15 @@ if(trim(adjustl(method_so))=='L1L0' .and. nf_DI > nf_L0 .and. ptype==1) then
     !Size of the active set
     nactive=0
     ! iteration starts
-    do ntry=1,L1para.nlambda
+    do ntry=1,L1para%nlambda
         ! create lambda sequence
         ! max and min in log space: max=log10(lambda_max),min=log10(0.001*lambda_max)
         ! density, i.e.: 100 points, interval=(max-min)/100=0.03
         ! lambda_i=10^(max-0.03*(i-1))
-        lambda=10**(log10(lambda_max)-3.0/L1para.dens*(ntry-1))
+        lambda=10**(log10(lambda_max)-3.0/L1para%dens*(ntry-1))
     
         ! call mtlasso
-        call mtlasso_mpi(prod_xty,prod_xtx,lambda,L1para.max_iter,L1para.tole,beta_init,run_iter,beta,nf,ncol)
+        call mtlasso_mpi(prod_xty,prod_xtx,lambda,L1para%max_iter,L1para%tole,beta_init,run_iter,beta,nf,ncol)
         
         ! lasso rmse
         do i=1,ntask
@@ -253,7 +253,7 @@ if(trim(adjustl(method_so))=='L1L0' .and. nf_DI > nf_L0 .and. ptype==1) then
         end if
 
         ! L1para.warm_start
-        if(L1para.warm_start) beta_init=beta
+        if(L1para%warm_start) beta_init=beta
         
         ! intercept and beta
         do i=1,ntask
@@ -322,10 +322,10 @@ if(trim(adjustl(method_so))=='L1L0' .and. nf_DI > nf_L0 .and. ptype==1) then
         else if (nactive==nf_DI) then
            if(mpirank==0) write(9,'(/a)') 'The whole feature space is already selected!'
            exit
-        else if (ntry==L1para.nlambda) then
+        else if (ntry==L1para%nlambda) then
            if(mpirank==0) write(9,'(/a)') 'Number of lambda trials hits the max !'
            exit
-        else if (maxval(lassormse)<L1para.minrmse) then
+        else if (maxval(lassormse)<L1para%minrmse) then
            if(mpirank==0) write(9,'(/a)') 'Required accuracy reached !'
            exit
         end if
@@ -372,8 +372,8 @@ deallocate(weight)
 
 call mpi_barrier(mpi_comm_world,mpierr)
 if(mpirank==0) then
-  mytime.eDI=mpi_wtime()
-  write(9,'(a,f15.2)') 'Time (second) used for this DI: ',mytime.eDI-mytime.sDI
+  mytime%eDI=mpi_wtime()
+  write(9,'(a,f15.2)') 'Time (second) used for this DI: ',mytime%eDI-mytime%sDI
 end if
 
 end subroutine
@@ -383,8 +383,8 @@ subroutine model(x,y,expr,nactive,activeset)
 ! model selection by L0 for regression
 integer nactive,activeset(:),i,j,k,l,loc(1),isc,ii(iFCDI),select_model(max(nmodel,1),iFCDI),&
         mID(max(nmodel,1),iFCDI),sc_loc(1),mpii,mpij
-integer*8 totalm,bigm,nall,nrecord,nupper,nlower,njob(mpisize)
-real*8 x(:,:,:),y(:,:),tmp,tmp2,wrmse(ntask),rmse(ntask),sc_rmse(2**iFCDI,ntask),maxae(ntask),&
+integer(kind=8) totalm,bigm,nall,nrecord,nupper,nlower,njob(mpisize)
+real(kind=8) x(:,:,:),y(:,:),tmp,tmp2,wrmse(ntask),rmse(ntask),sc_rmse(2**iFCDI,ntask),maxae(ntask),&
 sc_maxae(2**iFCDI,ntask),beta(iFCDI,ntask),intercept(ntask),select_rmse(max(nmodel,1)),&
 select_score(max(nmodel,1),2,1+ntask),select_maxae(max(nmodel,1)),&
 select_coeff(max(nmodel,1),iFCDI+1,ntask),mscore(max(nmodel,1),2,1+ntask),&
@@ -559,7 +559,7 @@ if(nmodel<1) nmodel=1
 
 ! collecting the best models
    if(mpirank>0) then
-     call mpi_send(totalm,1,mpi_integer8,0,1,mpi_comm_world,status,mpierr)
+     call mpi_send(totalm,1,mpi_integer8,0,1,mpi_comm_world,mpierr)
    else
      do i=1,mpisize-1
        call mpi_recv(bigm,1,mpi_integer8,i,1,mpi_comm_world,status,mpierr)
@@ -578,7 +578,7 @@ if(nmodel<1) nmodel=1
       loc=minloc(select_metric)
       k=loc(1)
       if(mpirank>0) then
-        call mpi_send(select_metric(loc(1)),1,mpi_double_precision,0,1,mpi_comm_world,status,mpierr)
+        call mpi_send(select_metric(loc(1)),1,mpi_double_precision,0,1,mpi_comm_world,mpierr)
       else
         mpicollect(1)=select_metric(loc(1))
         do i=1,mpisize-1
@@ -639,7 +639,7 @@ end subroutine
 subroutine writeout(iFCDI,id,rmse,maxae,betamin,interceptmin,x,y,expr)
 ! output the information for regression
 integer iFCDI,i,j,id(:),k
-real*8 rmse(:),maxae(:),betamin(:,:),interceptmin(:),x(:,:,:),y(:,:),yfit
+real(kind=8) rmse(:),maxae(:),betamin(:,:),interceptmin(:),x(:,:,:),y(:,:),yfit
 character expr(:)*200,line_name*100
 
  ! output the information to SISSO.out
@@ -708,12 +708,12 @@ subroutine model2(x,expr,nactive,activeset)
 ! model selection by L0 for classification
 integer nactive,activeset(:),i,j,k,l,loc(1),ii(iFCDI),itask,mm1,mm2,mm3,mm4,ns,select_model(max(nmodel,1),iFCDI),&
 mID(max(nmodel,1),iFCDI),overlap_n,overlap_n_tmp,select_overlap_n(max(nmodel,1)),nh,ntri,nconvexpair
-integer*8 totalm,bigm,nall,nrecord,nlower,nupper
-real*8  x(:,:,:),mscore(max(nmodel,1),2),overlap_size,overlap_size_tmp,select_overlap_size(max(nmodel,1)),&
+integer(kind=8) totalm,bigm,nall,nrecord,nlower,nupper
+real(kind=8)  x(:,:,:),mscore(max(nmodel,1),2),overlap_size,overlap_size_tmp,select_overlap_size(max(nmodel,1)),&
 hull(ubound(x,1),2),area(maxval(ngroup(:,1000))),mindist,xtmp1(ubound(x,1),3),xtmp2(ubound(x,1),3)
 character expr(:)*200,line_name*100
-integer*8 njob(mpisize),mpii,mpij
-real*8 mpicollect(mpisize,2)
+integer(kind=8) njob(mpisize),mpii,mpij
+real(kind=8) mpicollect(mpisize,2)
 logical isoverlap
 real progress
 integer,allocatable:: triangles(:,:)
@@ -906,7 +906,7 @@ if(nmodel<1) nmodel=1
 
 ! collecting the best models from all CPU cores
    if(mpirank>0) then
-     call mpi_send(totalm,1,mpi_integer8,0,1,mpi_comm_world,status,mpierr)
+     call mpi_send(totalm,1,mpi_integer8,0,1,mpi_comm_world,mpierr)
    else
      do i=1,mpisize-1
        call mpi_recv(bigm,1,mpi_integer8,i,1,mpi_comm_world,status,mpierr)
@@ -925,7 +925,7 @@ if(nmodel<1) nmodel=1
       mscore(j,:)=(/dble(select_overlap_n(k)),select_overlap_size(k)/)
 
       if(mpirank>0) then
-        call mpi_send(mscore(j,:),2,mpi_double_precision,0,1,mpi_comm_world,status,mpierr)
+        call mpi_send(mscore(j,:),2,mpi_double_precision,0,1,mpi_comm_world,mpierr)
       else
         mpicollect(1,:)=mscore(j,:)
         do i=1,mpisize-1
@@ -1045,7 +1045,7 @@ subroutine writeout2(x,iFCDI,id,expr,mscore)
 ! output the information for classification
 integer iFCDI,i,j,id(:),k,l,itask,mm1,mm2,mm3,mm4,ndata_ol,ntri
 integer,allocatable:: triangles(:,:)
-real*8 mscore(:,:),tmp,tmp2,x(:,:,:)
+real(kind=8) mscore(:,:),tmp,tmp2,x(:,:,:)
 character expr(:)*200,line_name*100
 logical inside,convexpair
 
@@ -1129,4 +1129,3 @@ logical inside,convexpair
 end subroutine
 
 end module
-

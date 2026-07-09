@@ -2,10 +2,11 @@ program af2traindat
 ! Creating the train.dat based on the files atom_features (list of atomic features) and
 ! samplelist (list of the training samples). 
 
-real*8,allocatable:: feat(:,:)
+real(kind=8),allocatable:: feat(:,:)
 character line*1000,atomline*1000,strings(500)*50,letter(14)*2
+character(len=100) fmt
 character,allocatable:: featname(:,:)*50,element(:)*10
-integer i,j,k,k1,k2,k3,k4,k5,k6,natom,naf,nele,npair,length
+integer i,j,k,k1,k2,k3,k4,k5,k6,natom,naf,nele,npair,length,iostatus
 
 ! mark for the constituent elements of a compound
 letter=(/'_A','_B','_C','_D','_E','_F','_G','_H','_I','_J','_K','_L','_M','_N'/)
@@ -13,8 +14,8 @@ letter=(/'_A','_B','_C','_D','_E','_F','_G','_H','_I','_J','_K','_L','_M','_N'/)
 ! files atom_features and samplelist must be ready
 write(*,'(a)') 'Number of atomic features to input from the file "atom_features"'
 read(*,*) naf
-write(*,'(a)'),'Number of elements in each sample in the file "samplelist" '
-read(*,*),nele
+write(*,'(a)') 'Number of elements in each sample in the file "samplelist" '
+read(*,*) nele
 
 allocate(feat(nele,naf))
 allocate(featname(nele,naf))
@@ -25,7 +26,7 @@ open(2,file='samplelist',status='old')
 open(3,file='atom_features',status='old')
 
 ! read the title line from atom_features for the feature names
-read(3,'(a)'),line
+read(3,'(a)') line
 call string_split(line,strings,' ')
 do i=1,naf
 do j=1,nele
@@ -36,17 +37,19 @@ rewind(3)
 
 ! get the element-name length
 read(2,*)  ! skip the title line
-read(2,'(a)'),line
+read(2,'(a)') line
 line=adjustl(line)
 length=(index(line,' ')-1)/nele
 rewind(2)
 ! write the title line to the train.dat
-write(1,'(a<max(8,length*nele)>,<nele*naf>a15)'),'compound',(((trim(adjustl(featname(k,i)))),k=1,nele),i=1,naf)
+write(fmt,'("(a",i0,",",i0,"a15)")') max(8,length*nele),nele*naf
+write(1,fmt) 'compound',(((trim(adjustl(featname(k,i)))),k=1,nele),i=1,naf)
 
 ! creating the file train.dat
 read(2,*)  ! skip the title line
-do while(.not. eof(2))
-read(2,'(a)'),line
+do
+read(2,'(a)',iostat=iostatus) line
+if(iostatus/=0) exit
    ! get the compound name
    call string_split(line,strings,' ')
    strings(1)=trim(adjustl(strings(1)))
@@ -57,10 +60,10 @@ read(2,'(a)'),line
    ! get the feature data from atom_features
    do i=1,nele
      rewind(3)
-     100 read(3,'(a)',end=101),atomline
+     100 read(3,'(a)',end=101) atomline
      k=index(atomline,trim(adjustl(element(i))))
      if(k/=0) then
-        read(atomline(k+length:),*),feat(i,:naf)
+        read(atomline(k+length:),*) feat(i,:naf)
         cycle
      else 
         goto 100
@@ -72,7 +75,8 @@ read(2,'(a)'),line
 
 
    ! write the feature data
-   write(1,'(<max(0,8-nele*length)>X,<nele>a,<nele*naf>f15.5)'),(trim(adjustl(element(i))),i=1,nele),&
+   write(fmt,'("(",i0,"x,",i0,"a,",i0,"f15.5)")') max(0,8-nele*length),nele,nele*naf
+   write(1,fmt) (trim(adjustl(element(i))),i=1,nele),&
          ((feat(j,i),j=1,nele),i=1,naf)
 end do
 
@@ -127,5 +131,3 @@ end subroutine
 
 
 end
-
-

@@ -18,7 +18,6 @@ use libsisso
 use FCse
 use FC
 use DI
-use ifport
 !-------------------
 implicit none
 
@@ -39,7 +38,7 @@ call read_para_a     ! read from SISSO.in
 fileunit=100
 
 if(mpirank==0) then
- mytime.sFCDI=mpi_wtime()
+ mytime%sFCDI=mpi_wtime()
 
 ! inquire(file='SISSO.out',exist=fexist)
 ! call date_and_time(date=sysdate,time=systime)
@@ -88,18 +87,8 @@ else
   icontinue=1
   tcontinue='FC'
   if(mpirank==0) then
-     iostatus=delfilesqq('Models/data_top1/*')
-     iostatus=delfilesqq('SIS_subspaces/*')
-     iostatus=delfilesqq('Models/*')
-
-     iostatus=deldirqq('Models/data_top1')
-     iostatus=deldirqq('SIS_subspaces')
-     iostatus=deldirqq('Models')
-
-     iostatus=makedirqq('Models')
-     iostatus=makedirqq('Models/data_top1')
-     iostatus=makedirqq('SIS_subspaces')
-!     iostatus=makedirqq('residual')
+     call execute_command_line('rm -rf Models SIS_subspaces', exitstat=iostatus)
+     call execute_command_line('mkdir -p Models/data_top1 SIS_subspaces', exitstat=iostatus)
   end if
 end if
 
@@ -146,7 +135,7 @@ do iFCDI=icontinue,desc_dim
    if(trim(adjustl(method_so))=='L0') then ! number of features for L0
       nf_L0=nf_DI
    else if(trim(adjustl(method_so))=='L1L0') then  ! number of features for the L0 from L1
-      nf_L0=L1para.nl1l0
+      nf_L0=L1para%nl1l0
    end if
 
    if(mpirank==0) call writeCONTINUE('DI')
@@ -176,8 +165,8 @@ deallocate(ypred)
 call mpi_barrier(mpi_comm_world,mpierr)
 
 if(mpirank==0) then
-   mytime.eFCDI=mpi_wtime()
-   write(9,'(a,f15.2)') 'Total time (second): ',mytime.eFCDI-mytime.sFCDI
+   mytime%eFCDI=mpi_wtime()
+   write(9,'(a,f15.2)') 'Total time (second): ',mytime%eFCDI-mytime%sFCDI
    write(9,'(a/)') 'Have a nice day !    '
    close(9)
 end if
@@ -275,21 +264,21 @@ do while(.true.)
    case('fit_intercept')
    read(line_short(i+1:),*,err=1001) fit_intercept
    case('L1para.max_iter')
-   read(line_short(i+1:),*,err=1001) L1para.max_iter
+   read(line_short(i+1:),*,err=1001) L1para%max_iter
    case('L1para.tole')
-   read(line_short(i+1:),*,err=1001) L1para.tole
+   read(line_short(i+1:),*,err=1001) L1para%tole
    case('L1para.nlambda')
-   read(line_short(i+1:),*,err=1001) L1para.nlambda
+   read(line_short(i+1:),*,err=1001) L1para%nlambda
    case('L1para.dens')
-   read(line_short(i+1:),*,err=1001) L1para.dens
+   read(line_short(i+1:),*,err=1001) L1para%dens
    case('L1para.minrmse')
-   read(line_short(i+1:),*,err=1001) L1para.minrmse
+   read(line_short(i+1:),*,err=1001) L1para%minrmse
    case('L1para.warm_start')
-   read(line_short(i+1:),*,err=1001) L1para.warm_start
+   read(line_short(i+1:),*,err=1001) L1para%warm_start
    case('L1para.elastic')
-   read(line_short(i+1:),*,err=1001) L1para.elastic
+   read(line_short(i+1:),*,err=1001) L1para%elastic
    case('L1para.weighted')
-   read(line_short(i+1:),*,err=1001) L1para.weighted
+   read(line_short(i+1:),*,err=1001) L1para%weighted
    end select
    end if
 end do
@@ -314,7 +303,7 @@ end subroutine
 
 ! read in the data for line nsample, funit, ops, and isconvex
 subroutine read_para_b
-integer*8 i,j,k,kk,l,ll
+integer(kind=8) i,j,k,kk,l,ll
 
 ! nsample
 nsample=0
@@ -406,9 +395,11 @@ end subroutine
 
 !read in the data from train.dat 
 subroutine read_data
-integer*8 i,j,k,l,mm1,mm2
-character(len=str_len) string_tmp(2+nsf),reactionline(100)*10000,samplename(sum(nsample)),line_verylong*line_len
-real*8 SD(ntask)
+integer(kind=8) i,j,k,l,mm1,mm2
+character(len=str_len) string_tmp(2+nsf),samplename(sum(nsample))
+character(len=10000) reactionline(100)
+character(len=line_len) line_verylong
+real(kind=8) SD(ntask)
 
  if(mpirank==0) write(9,'(a)') 'Read in data from train.dat'
 
@@ -476,7 +467,6 @@ ptype=1
 ntask=1               
 scmt=.false.          
 desc_dim=2           
-nsample=5             
 nsf= 5                
 fcomplexity=3         
 nunit=1
@@ -493,14 +483,14 @@ bwidth=0.001
 nf_sis_avai=0 
 task_weighting=1      
 !---------------------
-L1para.max_iter=1e6         ! Max iteration for LASSO (given a lambda) to stop
-L1para.tole=1e-6            ! Convergence criteria for LASSO to stop
-L1para.dens=120             ! Density of lambda grid = number of points in [0.001*max,max]
-L1para.nlambda=1e3          ! Max number of lambda points
-L1para.minrmse=1e-3         ! Min RMSE for the LASSO to stop
-L1para.warm_start=.true.    ! Using previous solution for the next step
-L1para.nl1l0= 30            ! Number of features for L0 from L1
-L1para.weighted=.false.       ! Weighted learning for L1 (provide file lasso.weight if yes)
+L1para%max_iter=1e6         ! Max iteration for LASSO (given a lambda) to stop
+L1para%tole=1e-6            ! Convergence criteria for LASSO to stop
+L1para%dens=120             ! Density of lambda grid = number of points in [0.001*max,max]
+L1para%nlambda=1e3          ! Max number of lambda points
+L1para%minrmse=1e-3         ! Min RMSE for the LASSO to stop
+L1para%warm_start=.true.    ! Using previous solution for the next step
+L1para%nl1l0= 30            ! Number of features for L0 from L1
+L1para%weighted=.false.       ! Weighted learning for L1 (provide file lasso.weight if yes)
 !----------------------
 
 end subroutine
@@ -554,17 +544,17 @@ subroutine output_para
      write(9,'(a,l6)') 'Fitting intercept: ',fit_intercept
      write(9,'(a,a)')  'Metric for model selection: ',trim(metric)
      if(trim(adjustl(method_so))=='L1L0') then
-       write(9,'(a,i10)') 'Max iterations for LASSO (with given lambda) to stop: ',L1para.max_iter
-       write(9,'(a,e20.10)') 'Convergence criterion for LASSO: ',L1para.tole
-       write(9,'(a,i8)') 'Number of lambda trial: ',L1para.nlambda
-       write(9,'(a,i8)') 'Density of lambda points: ',L1para.dens
-       write(9,'(a,e20.10)') 'Minimal RMSE for LASSO to stop: ',L1para.minrmse
-       write(9,'(a,l6)') 'Warm start?  ',L1para.warm_start
-       write(9,'(a,e20.10)') 'Elastic net: ',L1para.elastic
-       write(9,'(a,l6)') 'Weighted LASSO (file lasso.weight required)? ',L1para.weighted
+       write(9,'(a,i10)') 'Max iterations for LASSO (with given lambda) to stop: ',L1para%max_iter
+       write(9,'(a,e20.10)') 'Convergence criterion for LASSO: ',L1para%tole
+       write(9,'(a,i8)') 'Number of lambda trial: ',L1para%nlambda
+       write(9,'(a,i8)') 'Density of lambda points: ',L1para%dens
+       write(9,'(a,e20.10)') 'Minimal RMSE for LASSO to stop: ',L1para%minrmse
+       write(9,'(a,l6)') 'Warm start?  ',L1para%warm_start
+       write(9,'(a,e20.10)') 'Elastic net: ',L1para%elastic
+       write(9,'(a,l6)') 'Weighted LASSO (file lasso.weight required)? ',L1para%weighted
      end if
      if(trim(adjustl(method_so))=='L1L0') then
-         write(9,'(a,i8)') 'Number of selected features by L1 for L0 in L1L0:', L1para.nl1l0
+         write(9,'(a,i8)') 'Number of selected features by L1 for L0 in L1L0:', L1para%nl1l0
      end if
    end if
 
@@ -574,5 +564,3 @@ subroutine output_para
 end subroutine
 
 end program
-
-

@@ -12,11 +12,11 @@ program SISSO_predict
 ! Note: please make sure that no operator symbols appear in the feature names.
 ! E.g.: if a feature is named 'a', then 'abs()' will be mistakenly translated as xxxbs(), where xxx is the feature value.
 
-integer i,j,k,l,ndim,nd,nf,ns,ptype
+integer i,j,k,l,ndim,nd,nf,ns,ptype,iostatus
 character line*100000,pname*50
 character,allocatable:: desc(:)*500,allname(:)*50,afname(:)*50,mname(:)*50
-real*8 intercept,rmse,maxae
-real*8,allocatable:: y(:),af(:,:),dat_desc(:,:),coeff(:),res(:)
+real(kind=8) intercept,rmse,maxae
+real(kind=8),allocatable:: y(:),af(:,:),dat_desc(:,:),coeff(:),res(:)
 logical fexist
 
 
@@ -67,9 +67,9 @@ do i=1,ns
   call string_split(line,mname(i:i),' ')
   j=index(line,trim(mname(i)))
   if(ptype==1) then
-    read(line(j+len_trim(mname(i)):),*),y(i),af(i,:)
+    read(line(j+len_trim(mname(i)):),*) y(i),af(i,:)
   else
-    read(line(j+len_trim(mname(i)):),*),af(i,:)
+    read(line(j+len_trim(mname(i)):),*) af(i,:)
   end if
 end do
 close(1)
@@ -79,8 +79,9 @@ open(3,file='predict_Y.out',status='replace')
 open(4,file='predict_X.out',status='replace')
 
 nd=0
-do while(.not. eof(1))
-   read(1,'(a)') line
+do
+   read(1,'(a)',iostat=iostatus) line
+   if(iostatus/=0) exit
    if(index(line,'D descriptor')/=0) then
       i=index(line,'D descriptor')
       read(line(:i-1),*) nd
@@ -113,7 +114,7 @@ do while(.not. eof(1))
         dat_desc(:,i)=data_of_desc(ns,nf,desc(i),af,afname)
       end do
       do i=1,ns
-        write(4,'(<nd>e20.10)') dat_desc(i,:nd)
+        write(4,'(*(e20.10))') dat_desc(i,:nd)
       end do
 
       if(ptype==1) then
@@ -154,10 +155,10 @@ contains
 function data_of_desc(ns,nf,desc_str,af,afname)
 integer i,j,k,n,ns,nf,imax,length,maxlength
 character desc_str*500,afname(nf)*50,desc_expr(ns)*500,op(17)*10
-real*8 af(ns,nf),data_of_desc(ns)
+real(kind=8) af(ns,nf),data_of_desc(ns)
 logical fexist,isop,isvar
 
-op=(/'+','-','*','/','exp','exp(-','^-1','^2','^3','sqrt','cbrt','log','abs','scd','^6','sin','cos'/)
+op=[character(len=10):: '+','-','*','/','exp','exp(-','^-1','^2','^3','sqrt','cbrt','log','abs','scd','^6','sin','cos']
 nop=17
 n=0
 k=1

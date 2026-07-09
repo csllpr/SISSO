@@ -35,7 +35,9 @@ module libsisso
 ! dispp: distance from a point to a plane
 !************************************************************************
 
-use mpi
+use var_global, only: mpierr, mpirank, mpisize, status, mpi_double_precision, mpi_comm_world
+
+implicit none
 
 contains
 
@@ -47,7 +49,7 @@ function dispp(p,a,b,c)
 ! input: a,b,c are the three points determing the plane, p is the point outside the plane.
 ! output: the distance
 
-real*8 dispp,a(3),b(3),c(3),p(3),normal(3)
+real(kind=8) dispp,a(3),b(3),c(3),p(3),normal(3)
 normal=crosspro((a-b),(c-b))
 dispp=abs(sum(normal*(p-a)))/sqrt(sum(normal**2))
 
@@ -58,7 +60,7 @@ function interlp(p1,p2,p3,p4,p5)
 ! input: p1,p2,p3 for determing the plane, p4 and p5 determing the line
 ! output: the interception point
 
-real*8 interlp(3),p1(3),p2(3),p3(3),p4(3),p5(3),normal(3),a,b,c,d,&
+real(kind=8) interlp(3),p1(3),p2(3),p3(3),p4(3),p5(3),normal(3),a,b,c,d,&
        m,n,p,t
 ! for plane
 normal=crosspro((p1-p2),(p3-p2))
@@ -81,7 +83,7 @@ end function
 function intriangle(p,a,b,c)
 ! check if point p is inside the triangle formed by points a,b,c
 ! p,a,b,c are in the same plane
-real*8 a(3),b(3),c(3),p(3),v1(3),v2(3),normal_0(3),normal_1(3),normal_2(3),normal_3(3)
+real(kind=8) a(3),b(3),c(3),p(3),v1(3),v2(3),normal_0(3),normal_1(3),normal_2(3),normal_3(3)
 logical intriangle
 intriangle=.false.
 v1=a-b
@@ -105,7 +107,7 @@ subroutine string_split(instr,outstr,sp)
 ! input: instr, string; sp, separator
 ! output: outstr, sub-strings
 character(len=*) instr,outstr(:),sp
-integer n
+integer i,j,n
 logical isend
 
 isend=.false.
@@ -143,7 +145,7 @@ function corr(x,y)
 ! pearson's correlation
 ! input: vector x and y
 ! output: the correlation coefficient
-real*8 x(:),y(:),meanx,meany,sigmax,sigmay,m,corr
+real(kind=8) x(:),y(:),meanx,meany,sigmax,sigmay,m,corr
 m=size(x)
 
 meanx=sum(x)/m
@@ -160,7 +162,7 @@ function det(mat)
 ! output: the determinant.
 
 integer i,j,k,n
-real*8 mat(:,:),um(ubound(mat,1),ubound(mat,1)),s,det,temp(ubound(mat,1))
+real(kind=8) mat(:,:),um(ubound(mat,1),ubound(mat,1)),s,det,temp(ubound(mat,1))
 s=0
 um=mat
 n=ubound(mat,1)
@@ -201,8 +203,8 @@ function inverse(mat)
 ! calculate the inverse of a given matrix
 ! input: the matrix mat
 
-real*8  mat(:,:),um(ubound(mat,1),ubound(mat,1)),lm(ubound(mat,1),ubound(mat,1))
-real*8  x(ubound(mat,1),ubound(mat,1)),y(ubound(mat,1),ubound(mat,1)),inverse(ubound(mat,1),ubound(mat,1))
+real(kind=8)  mat(:,:),um(ubound(mat,1),ubound(mat,1)),lm(ubound(mat,1),ubound(mat,1))
+real(kind=8)  x(ubound(mat,1),ubound(mat,1)),y(ubound(mat,1),ubound(mat,1)),inverse(ubound(mat,1),ubound(mat,1)),s
 integer i,j,k,n
 um=mat
 n=ubound(mat,1)
@@ -258,8 +260,8 @@ subroutine qr_de(a,q,r)
 ! QR decomposition of input matrix a
 ! https://en.wikipedia.org/wiki/QR_decomposition
 integer i,j,k,m,n
-real*8 a(:,:),q(ubound(a,1),ubound(a,2)),r(ubound(a,2),ubound(a,2))
-real*8 u(ubound(a,1),ubound(a,2)),e(ubound(a,1),ubound(a,2))
+real(kind=8) a(:,:),q(ubound(a,1),ubound(a,2)),r(ubound(a,2),ubound(a,2))
+real(kind=8) u(ubound(a,1),ubound(a,2)),e(ubound(a,1),ubound(a,2))
 m=ubound(a,1)
 n=ubound(a,2)
 u=0
@@ -296,8 +298,8 @@ subroutine orth_de(x,y,intercept,beta,rmse)
 ! output intercept,beta,rmse
 ! https://en.wikipedia.org/wiki/Linear_least_squares_(mathematics)
 
-real*8  x(:,:),y(:),beta(ubound(x,2)),xprime(ubound(x,1),ubound(x,2)),yprime(ubound(y,1)),intercept,rmse
-real*8  q(ubound(x,1),ubound(x,2)),r(ubound(x,2),ubound(x,2)),qty(ubound(x,2)),xmean(ubound(x,2)),ymean
+real(kind=8)  x(:,:),y(:),beta(ubound(x,2)),xprime(ubound(x,1),ubound(x,2)),yprime(ubound(y,1)),intercept,rmse
+real(kind=8)  q(ubound(x,1),ubound(x,2)),r(ubound(x,2),ubound(x,2)),qty(ubound(x,2)),xmean(ubound(x,2)),ymean
 integer i,j,k,m,n
 
 m=ubound(x,1)
@@ -331,8 +333,8 @@ subroutine orth_de_nointercept(x,y,beta,rmse)
 ! input: matrix x,vector y; 
 ! output beta,rmse
 
-real*8 x(:,:),y(:),beta(ubound(x,2)),rmse
-real*8 q(ubound(x,1),ubound(x,2)),r(ubound(x,2),ubound(x,2)),qty(ubound(x,2))
+real(kind=8) x(:,:),y(:),beta(ubound(x,2)),rmse
+real(kind=8) q(ubound(x,1),ubound(x,2)),r(ubound(x,2),ubound(x,2)),qty(ubound(x,2))
 integer i,j,k,m,n
 
 m=ubound(x,1)
@@ -359,7 +361,7 @@ end subroutine
 subroutine worth_de(x,y,weight,intercept,beta,rmse,wrmse)
 ! weighted linear least sqaure
 implicit none
-real*8  x(:,:),y(:),beta(ubound(x,2)),xprime(ubound(x,1),ubound(x,2)),yprime(ubound(y,1)),intercept,wrmse,rmse,&
+real(kind=8)  x(:,:),y(:),beta(ubound(x,2)),xprime(ubound(x,1),ubound(x,2)),yprime(ubound(y,1)),intercept,wrmse,rmse,&
 q(ubound(x,1),ubound(x,2)),r(ubound(x,2),ubound(x,2)),qty(ubound(x,2)),xmean(ubound(x,2)),ymean,weight(:),&
 wx(ubound(x,1),ubound(x,2)),wy(ubound(y,1))
 integer i,j,k,m,n
@@ -402,7 +404,7 @@ subroutine lls(x,y,intercept,beta,rmse)
 ! output: beta,rmse, intercept
 ! https://en.wikipedia.org/wiki/Linear_least_squares_(mathematics)
 implicit none
-real*8  x(:,:),y(ubound(x,1)),beta0(ubound(x,2)+1),rmse,x0(ubound(x,1),ubound(x,2)+1),&
+real(kind=8)  x(:,:),y(ubound(x,1)),beta0(ubound(x,2)+1),rmse,x0(ubound(x,1),ubound(x,2)+1),&
         beta(ubound(x,2)),intercept
 integer m,n
 m=ubound(x,1)
@@ -423,7 +425,7 @@ function crosspro(a,b)
 ! calculate the cross product: a x b
 ! input: vector a and b
 ! output: a vector
-real*8  a(3),b(3),crosspro(3)
+real(kind=8)  a(3),b(3),crosspro(3)
 crosspro(1)=a(2)*b(3)-a(3)*b(2);
 crosspro(2)=a(3)*b(1)-a(1)*b(3);
 crosspro(3)=a(1)*b(2)-a(2)*b(1);
@@ -431,7 +433,7 @@ end function
 
 function crosspro_abnormalized(a,b)
 ! a and b are normalized before calculating their cross product
-real*8  a(3),b(3),aa(3),bb(3),crosspro_abnormalized(3),norma,normb
+real(kind=8)  a(3),b(3),aa(3),bb(3),crosspro_abnormalized(3),norma,normb
 aa=a
 bb=b
 norma=sqrt(sum(aa**2))
@@ -458,10 +460,10 @@ subroutine lasso(prod_xty,prod_xtx,lambda,max_iter,tole,beta_init,run_iter,beta,
 ! run_iter, actual run cycles; nf: number of selected features; 
 ! input prod_xty,prod_xtx,lambda,max_iter,tole,beta_init; 
 ! output run_iter,beta, nf
-! (LASSO) J. Friedman, T. Hastie, R. Tibshirani, J. Stat. Softw. 33, 1(2010).
-! (LASSO) J. Friedman, T. Hastie, H. Hofling, R. Tibshirani, Ann. Appl. Stat. 1, 302 (2007).
+! (LASSO) J. Friedman, T. Hastie, R. Tibshirani, J. Stat. Softw. 33, 1(2010)%
+! (LASSO) J. Friedman, T. Hastie, H. Hofling, R. Tibshirani, Ann. Appl. Stat. 1, 302 (2007)%
 implicit none
-real*8 prod_xty(:),prod_xtx(:,:),lambda,beta(:),beta_init(:),&
+real(kind=8) prod_xty(:),prod_xtx(:,:),lambda,beta(:),beta_init(:),&
 beta_old(ubound(beta,1)),z,tole,rand(ubound(beta,1)),beta_tmp,dbeta,xxbeta(ubound(beta,1))
 integer ntotf,i,i1,i2(1),j,k,max_iter,run_iter,nf,ac1(ubound(beta,1)),ac2(ubound(beta,1))
 logical active_change
@@ -539,18 +541,19 @@ subroutine mtlasso_mpi(prod_xty,prod_xtx,lambda,max_iter,tole,beta_init,run_iter
 ! run_iter, actual run cycles; nf: number of selected features; 
 ! ncol: mpi jobs assignment
 ! output run_iter,beta, nf
-! (LASSO) J. Friedman, T. Hastie, R. Tibshirani, J. Stat. Softw. 33, 1(2010).
-! (LASSO) J. Friedman, T. Hastie, H. Hofling, R. Tibshirani, Ann. Appl. Stat. 1, 302 (2007).
+! (LASSO) J. Friedman, T. Hastie, R. Tibshirani, J. Stat. Softw. 33, 1(2010)%
+! (LASSO) J. Friedman, T. Hastie, H. Hofling, R. Tibshirani, Ann. Appl. Stat. 1, 302 (2007)%
 ! (MTLASSO) G. Obozinski, B. Taskar, M. Jordan, 2006 "Multi-task feature selection"
 ! multi-task lasso return back to lasso when the number of task is one
 ! algorithm for sovling multi-task lasso can be found from that of group lasso
 ! (GLASSO) M. Yuan and Y. Lin, J. R. Statist. Soc. B 68,49(2006)
 ! (GLASSO) J. Friedman, T. Hastie, and R. Tibshirani, 2010 "A note on the group lasso and a sparse group lasso"
-! (Elastic net) H. Zou, and T. Hastie, J. R. Statist. Soc. B 67, 301 (2005).
+! (Elastic net) H. Zou, and T. Hastie, J. R. Statist. Soc. B 67, 301 (2005)%
 
-real*8 prod_xty(:,:),prod_xtx(:,:,:),lambda,beta(:,:),beta_init(:,:),beta_old(ubound(beta,1),ubound(beta,2)),tole,&
+real(kind=8) prod_xty(:,:),prod_xtx(:,:,:),lambda,beta(:,:),beta_init(:,:),beta_old(ubound(beta,1),ubound(beta,2)),tole,&
 beta_tmp(ubound(beta,2)),beta_tmp2(ubound(beta,2)),dbeta,xxbeta(ubound(beta,1),ubound(beta,2)),&
 Sj(ubound(beta,2)),norm
+real(kind=8),allocatable:: mpi_buf(:,:)
 integer ntotf,i,j,k,max_iter,run_iter,nf,ac1(ubound(beta,1)),ac2(ubound(beta,1)),ntask,mpii,mpij,mpik,mpin,ncol(:)
 logical active_change
 !----
@@ -570,12 +573,18 @@ end do
 ! rank0 collect data and broadcast
 mpin=ncol(mpirank+1)
 if (mpirank /=0) then
-call mpi_send(xxbeta(1:mpin,:),mpin*ntask,mpi_double_precision,0,1,mpi_comm_world,mpierr)
+allocate(mpi_buf(mpin,ntask))
+mpi_buf=xxbeta(1:mpin,:)
+call mpi_send(mpi_buf,mpin*ntask,mpi_double_precision,0,1,mpi_comm_world,mpierr)
+deallocate(mpi_buf)
 else
 do mpii=1,mpisize-1
 mpij=sum(ncol(1:mpii))
 mpik=ncol(mpii+1)
-call mpi_recv(xxbeta(mpij+1:mpij+mpik,:),mpik*ntask,mpi_double_precision,mpii,1,mpi_comm_world,status,mpierr)
+allocate(mpi_buf(mpik,ntask))
+call mpi_recv(mpi_buf,mpik*ntask,mpi_double_precision,mpii,1,mpi_comm_world,status,mpierr)
+xxbeta(mpij+1:mpij+mpik,:)=mpi_buf
+deallocate(mpi_buf)
 end do
 end if
 
@@ -644,13 +653,18 @@ do i=1,max_iter
 
   mpin=ncol(mpirank+1)
   if (mpirank /=0) then
-  call mpi_send(beta(1+sum(ncol(1:mpirank)):sum(ncol(1:mpirank+1)),:),ncol(mpirank+1)*ntask,&
-                     mpi_double_precision,0,1,mpi_comm_world,mpierr)
+  allocate(mpi_buf(mpin,ntask))
+  mpi_buf=beta(1+sum(ncol(1:mpirank)):sum(ncol(1:mpirank+1)),:)
+  call mpi_send(mpi_buf,mpin*ntask,mpi_double_precision,0,1,mpi_comm_world,mpierr)
+  deallocate(mpi_buf)
   else
   do mpii=1,mpisize-1
   mpij=sum(ncol(1:mpii))
   mpik=ncol(mpii+1)
-  call mpi_recv(beta(mpij+1:mpij+mpik,:),mpik*ntask,mpi_double_precision,mpii,1,mpi_comm_world,status,mpierr)
+  allocate(mpi_buf(mpik,ntask))
+  call mpi_recv(mpi_buf,mpik*ntask,mpi_double_precision,mpii,1,mpi_comm_world,status,mpierr)
+  beta(mpij+1:mpij+mpik,:)=mpi_buf
+  deallocate(mpi_buf)
   end do
   end if
   call mpi_bcast(beta,ntotf*ntask,mpi_double_precision,0,mpi_comm_world,mpierr)
@@ -695,7 +709,7 @@ subroutine sc_coord_descent(x,y,max_iter,tole,dd,intercept,beta,rmse)
 
 implicit none
 integer m,n,i,j,k,max_iter,dd
-real*8 x(:,:),y(ubound(x,1)),beta(ubound(x,2),2**dd),beta_old(ubound(x,2),2**dd),xprime(ubound(x,1),ubound(x,2)),&
+real(kind=8) x(:,:),y(ubound(x,1)),beta(ubound(x,2),2**dd),beta_old(ubound(x,2),2**dd),xprime(ubound(x,1),ubound(x,2)),&
 xdprime(ubound(x,1),ubound(x,2)),yprime(ubound(y,1)),intercept(2**dd),rmse(2**dd),tole,norm_beta,&
 prod_xty(ubound(x,2)),prod_xtx(ubound(x,2),ubound(x,2)),xpnorm(ubound(x,2)),ymean,xmean(ubound(x,2))
 integer csign(ubound(x,2),2**dd)
@@ -765,7 +779,7 @@ subroutine sc_coord_descent_nointercept(x,y,max_iter,tole,dd,beta,rmse)
 
 implicit none
 integer m,n,i,j,k,max_iter,dd
-real*8 x(:,:),y(ubound(x,1)),beta(ubound(x,2),2**dd),beta_old(ubound(x,2),2**dd),xprime(ubound(x,1),ubound(x,2)),&
+real(kind=8) x(:,:),y(ubound(x,1)),beta(ubound(x,2),2**dd),beta_old(ubound(x,2),2**dd),xprime(ubound(x,1),ubound(x,2)),&
 rmse(2**dd),tole,norm_beta,prod_xty(ubound(x,2)),prod_xtx(ubound(x,2),ubound(x,2)),xnorm(ubound(x,2))
 integer csign(ubound(x,2),2**dd)
 
@@ -821,7 +835,7 @@ subroutine coord_descent(x,y,max_iter,tole,intercept,beta,rmse)
 ! output: intercept,beta,rmse
 
 implicit none
-real*8 x(:,:),y(ubound(x,1)),beta(ubound(x,2)),beta_old(ubound(x,2)),xprime(ubound(x,1),ubound(x,2)),&
+real(kind=8) x(:,:),y(ubound(x,1)),beta(ubound(x,2)),beta_old(ubound(x,2)),xprime(ubound(x,1),ubound(x,2)),&
 xdprime(ubound(x,1),ubound(x,2)),yprime(ubound(y,1)),intercept,rmse,tole,norm_beta,prod_xty(ubound(x,2)),&
 prod_xtx(ubound(x,2),ubound(x,2)),xpnorm(ubound(x,2)),ymean,xmean(ubound(x,2))
 integer m,n,i,j,k,max_iter
@@ -875,7 +889,7 @@ subroutine kfoldCV(x,y,random,fold,noise,CVrmse,CVmax)
 ! output: CVrmse, CVmax,
 
 integer ns,fold,random(:),mm1,mm2,mm3,mm4,i,j,k,kk,l
-real*8 x(:,:),y(:),beta(ubound(x,2)),intercept,rmse,CVse(fold),CVrmse,CVmax,pred(ubound(y,1)),noise(:)
+real(kind=8) x(:,:),y(:),beta(ubound(x,2)),intercept,rmse,CVse(fold),CVrmse,CVmax,pred(ubound(y,1)),noise(:)
 
 if(fold<2) then
   print *, 'Error: The fold of CV must be >=2 !'; stop
@@ -912,7 +926,7 @@ subroutine convex2D_hull(set,numb,hull)
 ! calculate the convex hull for a given data set
 ! input: set, a matrix N x 2
 ! output: numb (number of vertices); hull, the vertices stored in clockwise direction
-real*8 set(:,:),hull(:,:),tmp,vjj(2),vij(2),vkj(2),normij,normkj
+real(kind=8) set(:,:),hull(:,:),tmp,vjj(2),vij(2),vkj(2),normij,normkj
 integer numb,i,j,k,ntot,loc(1),nrecord
 logical used(ubound(set,1)),isvertex
 
@@ -1005,7 +1019,7 @@ subroutine convex3D_hull(set,ntri,triangles)
 ! input: set, a matrix N x 3
 ! output:  triangles, the ids of vertices forming traingles; ntri, number of triangles
 ! NOTE: triangles is an allocatable array
-real*8  set(:,:),tmp,vij(2),vkj(2),normal_a(3),normal_b(3),vtmp(3,3),vedge(3),aa,bb,cc
+real(kind=8)  set(:,:),tmp,vij(2),vkj(2),normal_a(3),normal_b(3),vtmp(3,3),vedge(3),aa,bb,cc
 integer ntri,i,j,k,l,m,ntot,loc(2),nedge,iedge,leftright,comp(3),size_tri,size_edge,ntri_coplane,ntri_saved,nvert
 integer,allocatable:: triangles(:,:),edges(:,:),change(:,:),recorder(:),coplane(:,:),ver_index(:)
 logical overlap(ubound(set,1)),used,planar,goodedge
@@ -1370,7 +1384,7 @@ subroutine convex2d_overlap(set1,set2,bwidth,numb,area)
 ! if two convex domain has more than two intersection points, the two domains are considered totally overlap !
 
 integer i,j,i2,j2,k,numb,nh1,nh2,ns1,ns2,n_intersect
-real*8 set1(:,:),set2(:,:),area,hull1(ubound(set1,1),2),hull2(ubound(set2,1),2),bwidth,norm1,norm2,vunit1(2),vunit2(2),&
+real(kind=8) set1(:,:),set2(:,:),area,hull1(ubound(set1,1),2),hull2(ubound(set2,1),2),bwidth,norm1,norm2,vunit1(2),vunit2(2),&
 set3(10*(ubound(set1,1)+ubound(set2,1)),2),tmp,segp(4,2),delta,lambda,mu,xa,xb,ya,yb,xc,xd,yc,yd
 logical inside,polygon1,polygon2
 
@@ -1502,7 +1516,7 @@ function convex2d_area(set)
 ! calculate the area of a 2d convex hull
 ! input: set, a matrix
 ! output: area
-real*8 va(2),vb(2),area,convex2d_area,set(:,:),hull(ubound(set,1),ubound(set,2))
+real(kind=8) va(2),vb(2),area,convex2d_area,set(:,:),hull(ubound(set,1),ubound(set,2))
 integer i,j,k,nh
 
 call convex2D_hull(set,nh,hull)
@@ -1526,7 +1540,7 @@ function convex2d_in(set1,set2,bwidth)
 ! output: .false. or .true.
 
 integer i,j,k,nh,np,convex2d_in
-real*8 set1(:,:),set2(:,:),hull(ubound(set1,1),ubound(set1,2)),tmp,bwidth,norm1,norm2,vunit1(2),vunit2(2)
+real(kind=8) set1(:,:),set2(:,:),hull(ubound(set1,1),ubound(set1,2)),tmp,bwidth,norm1,norm2,vunit1(2),vunit2(2)
 
 call convex2D_hull(set1,nh,hull)
 convex2d_in=0
@@ -1568,7 +1582,7 @@ end function
 function convex2d_dist(set1,set2)
 ! calculate the distance between two data sets (convex hulls)
 
-real*8 set1(:,:),set2(:,:),convex2d_dist,hull1(ubound(set1,1),2),hull2(ubound(set2,1),2),&
+real(kind=8) set1(:,:),set2(:,:),convex2d_dist,hull1(ubound(set1,1),2),hull2(ubound(set2,1),2),&
 p1(2),p2(2),p3(2),va(2),vb(2),vv(2),dot,len_sq,param,dist
 integer nh1,nh2,i,j,k
 
@@ -1655,7 +1669,7 @@ end function
 subroutine convex1d_overlap(set1,set2,bwidth,numb,length)
 ! input: set1, set2, bwidth
 ! output: number of data, and the length, in the overlapped region
-real*8 set1(:),set2(:),length,mini,maxi,bwidth
+real(kind=8) set1(:),set2(:),length,mini,maxi,bwidth
 integer numb,i,ns1,ns2
 ns1=ubound(set1,1)
 ns2=ubound(set2,1)
@@ -1683,8 +1697,8 @@ end subroutine
 
 function convex1d_in(set1,set2,bwidth)
 ! check how many data points of set2 are inside the segment by set1
-real*8 set1(:),set2(:),mini,maxi,bwidth
-integer i,convex1d_in
+real(kind=8) set1(:),set2(:),mini,maxi,bwidth
+integer i,ns1,ns2,convex1d_in
 ns1=ubound(set1,1)
 ns2=ubound(set2,1)
 
@@ -1704,9 +1718,9 @@ function convex3d_in(set1,set2,bwidth,ntri,triangles)
 ! input: the full data set1,set2, the boundary tolerence, and the hull-triangles
 
 integer iii,i,j,k,ntri,ninter,triangles(:,:),convex3d_in
-real*8 pref(3),set1(:,:),set2(:,:),bwidth,pproj(3),pinter(3),v1(3),v2(3),v3(3),&
+real(kind=8) pref(3),set1(:,:),set2(:,:),bwidth,pproj(3),pinter(3),v1(3),v2(3),v3(3),&
        normal(3),ddd,ttt,area,dist(3),vtmp(3,3)
-real*8,allocatable:: inter_all(:,:)
+real(kind=8),allocatable:: inter_all(:,:)
 logical inside
 
 convex3d_in=0
@@ -1801,9 +1815,9 @@ subroutine convex3d_overlap(set1,set2,bwidth,numb)
 ! input: data set 1, data set 2,bwidth(boundary tolerance)
 ! output: number of data in the overlapped region
 
-integer no1,no2,i,j,k,nset1,nset2,ntri1,ntri2
+integer no1,no2,i,j,k,nset1,nset2,ntri1,ntri2,numb
 integer,allocatable:: triangles(:,:)
-real*8 set1(:,:),set2(:,:),bwidth
+real(kind=8) set1(:,:),set2(:,:),bwidth
 logical inside
 
 nset1=ubound(set1,1)
@@ -1838,5 +1852,3 @@ end subroutine
 
 
 end module
-
-
